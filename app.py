@@ -105,3 +105,43 @@ if st.button("Search Across Nodes"):
     ax3.set_ylabel("Distance")
     ax3.grid(True, axis="y", alpha=0.3)
     st.pyplot(fig3)
+# Step 7 & 8: Benchmark
+st.markdown("---")
+st.subheader("Benchmark: Search Time on Small vs Large Dataset")
+st.markdown("Compare how long the distributed search takes on a small vs large slice of the data.")
+
+if st.button("Run Benchmark"):
+    import time
+
+    small_size = 100
+    large_size = len(sax_data)
+    small_data = sax_data[:small_size]
+    large_data = sax_data
+    benchmark_query = sax_data[query_index]
+    results_table = []
+
+    for label, dataset in [("Small (100 series)", small_data), (f"Large ({large_size} series)", large_data)]:
+        nodes = split_into_nodes(dataset, num_nodes=num_nodes)
+        start = time.time()
+        distributed_search(nodes, benchmark_query)
+        elapsed = time.time() - start
+        results_table.append((label, len(dataset), round(elapsed, 4)))
+
+    labels_b = [r[0] for r in results_table]
+    times    = [r[2] for r in results_table]
+    sizes    = [r[1] for r in results_table]
+
+    fig_bench, ax_bench = plt.subplots(figsize=(7, 4))
+    bars = ax_bench.bar(labels_b, times, color=["steelblue", "coral"], alpha=0.85, width=0.4)
+    ax_bench.bar_label(bars, fmt="%.4f s", padding=5, fontsize=11)
+    ax_bench.set_ylabel("Search Time (seconds)")
+    ax_bench.set_title("Distributed Search: Small vs Large Dataset")
+    ax_bench.grid(True, axis="y", alpha=0.3)
+    st.pyplot(fig_bench)
+
+    col_s, col_l = st.columns(2)
+    col_s.metric("Small Dataset", f"{times[0]:.4f}s", f"{sizes[0]} series")
+    col_l.metric("Large Dataset", f"{times[1]:.4f}s", f"{sizes[1]} series")
+
+    speedup = round(times[1] / times[0], 2) if times[0] > 0 else "N/A"
+    st.info(f"The large dataset took **{speedup}x** longer than the small one.")
